@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <TargetFramework>netcoreapp2.1</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.AspNetCore.App" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\ExpressiveAnnotations.DotNetCore.MvcUnobtrusive\ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.csproj" />
+    <ProjectReference Include="..\ExpressiveAnnotations.DotNetCore\ExpressiveAnnotations.DotNetCore.csproj" />
+  </ItemGroup>
+
+</Project>
