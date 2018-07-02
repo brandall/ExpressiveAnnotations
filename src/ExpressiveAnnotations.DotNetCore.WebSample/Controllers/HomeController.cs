@@ -15,9 +15,13 @@ namespace ExpressiveAnnotations.DotNetCore.WebSample.Controllers
             var model = new PersonViewModel()
             {
                 Id = 101,
-                FirstName = "Brian",
-                LastName = "Randall",
-                Age = 5
+                FirstName = "John",
+                LastName = "Smith",
+                Age = 5,
+                ContactPreferences = new ContactPreferencesViewModel()
+                {
+                    ContactByEmail = true
+                }
             };
 
             ViewData["Message"] = "Test validation using form below.";
