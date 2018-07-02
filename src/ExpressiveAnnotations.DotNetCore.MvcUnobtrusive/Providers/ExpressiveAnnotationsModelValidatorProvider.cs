@@ -1,5 +1,4 @@
 ﻿using ExpressiveAnnotations.DotNetCore.Attributes;
-using ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Caching;
 using ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Validators;
 using Microsoft.AspNetCore.Mvc.DataAnnotations;
 using Microsoft.Extensions.Localization;
@@ -10,7 +9,7 @@ namespace ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Providers
     public class ExpressiveAnnotationsAttributeAdapterProvider : IValidationAttributeAdapterProvider
     {
         private readonly IValidationAttributeAdapterProvider _baseProvider;
-        
+
         public ExpressiveAnnotationsAttributeAdapterProvider()
         {
             _baseProvider = new ValidationAttributeAdapterProvider();
@@ -20,14 +19,14 @@ namespace ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Providers
         {
             if (attribute is RequiredIfAttribute reuiredIfAttribute)
             {
-                return new RequiredIfValidator(reuiredIfAttribute, stringLocalizer, new RequestStorage());
+                return new RequiredIfValidator(reuiredIfAttribute, stringLocalizer);
             }
 
             if (attribute is AssertThatAttribute assertThatAttribute)
             {
-                return new AssertThatValidator(assertThatAttribute, stringLocalizer, new RequestStorage());
+                return new AssertThatValidator(assertThatAttribute, stringLocalizer);
             }
-            
+
             return _baseProvider.GetAttributeAdapter(attribute, stringLocalizer);
         }
     }

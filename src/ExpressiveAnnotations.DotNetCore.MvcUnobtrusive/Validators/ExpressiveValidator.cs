@@ -6,76 +6,70 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.Extensions.Localization;
 using System;
 using System.Collections.Generic;
-using System.ComponentModel.DataAnnotations;
-using System.Diagnostics;
 using System.Linq;
 using System.Linq.Expressions;
-using System.Threading;
 
 namespace ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Validators
 {
     public abstract class ExpressiveValidator<T> : AttributeAdapterBase<T> where T : ExpressiveAttribute
     {
-        private readonly RequestStorage _requestStorage;
-
         protected bool? AllowEmpty;
 
-        protected ExpressiveValidator(T attribute, IStringLocalizer stringLocalizer, RequestStorage requestStorage)
+        protected ExpressiveValidator(T attribute, IStringLocalizer stringLocalizer)
             : base(attribute, stringLocalizer)
         {
-            _requestStorage = requestStorage;
         }
 
         public override void AddValidation(ClientModelValidationContext context)
         {
             SetupValidator(context.ModelMetadata);
 
-            var ruleType = ProvideUniqueValidationType(GetBasicRuleType());
+            var validationId = GetUniqueValidationId(context);
             var formattedErrorMessage = GetErrorMessage(context);
-            
-            MergeAttribute(context.Attributes, "data-val", "true");
-            MergeAttribute(context.Attributes, $"data-val-{ruleType}", formattedErrorMessage);
 
-            MergeExpressiveAttribute(context, ruleType, "expression", Attribute.Expression);
+            MergeAttribute(context.Attributes, "data-val", "true");
+            MergeAttribute(context.Attributes, $"data-val-{validationId}", formattedErrorMessage);
+
+            MergeExpressiveAttribute(context, validationId, "expression", Attribute.Expression);
 
             if (AllowEmpty.HasValue)
             {
-                MergeExpressiveAttribute(context, ruleType, "allowempty", AllowEmpty);
+                MergeExpressiveAttribute(context, validationId, "allowempty", AllowEmpty);
             }
 
             if (FieldsMap != null && FieldsMap.Any())
             {
-                MergeExpressiveAttribute(context, ruleType, "fieldsmap", FieldsMap);
+                MergeExpressiveAttribute(context, validationId, "fieldsmap", FieldsMap);
             }
             if (ConstsMap != null && ConstsMap.Any())
             {
-                MergeExpressiveAttribute(context, ruleType, "constsmap", ConstsMap);
+                MergeExpressiveAttribute(context, validationId, "constsmap", ConstsMap);
             }
             if (EnumsMap != null && EnumsMap.Any())
             {
-                MergeExpressiveAttribute(context, ruleType, "enumsmap", EnumsMap);
+                MergeExpressiveAttribute(context, validationId, "enumsmap", EnumsMap);
             }
             if (MethodsList != null && MethodsList.Any())
             {
-                MergeExpressiveAttribute(context, ruleType, "methodslist", MethodsList);
+                MergeExpressiveAttribute(context, validationId, "methodslist", MethodsList);
             }
             if (ParsersMap != null && ParsersMap.Any())
             {
-                MergeExpressiveAttribute(context, ruleType, "parsersmap", ParsersMap);
+                MergeExpressiveAttribute(context, validationId, "parsersmap", ParsersMap);
             }
             if (ErrFieldsMap != null && ErrFieldsMap.Any())
             {
-                MergeExpressiveAttribute(context, ruleType, "errfieldsmap", ErrFieldsMap);
+                MergeExpressiveAttribute(context, validationId, "errfieldsmap", ErrFieldsMap);
             }
         }
 
         protected void MergeExpressiveAttribute(
-            ClientModelValidationContext context, 
-            string ruleType,
-            string attributeSuffix, 
+            ClientModelValidationContext context,
+            string validationId,
+            string attributeSuffix,
             object value)
         {
-            MergeAttribute(context.Attributes, $"data-val-{ruleType}-{attributeSuffix}", value.ToJson());
+            MergeAttribute(context.Attributes, $"data-val-{validationId}-{attributeSuffix}", value.ToJson());
         }
 
         public override string GetErrorMessage(ModelValidationContextBase validationContext)
@@ -83,9 +77,9 @@ namespace ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Validators
             IDictionary<string, Guid> errFieldsMap;
 
             var errorMessage = Attribute.FormatErrorMessage(
-                validationContext.ModelMetadata.GetDisplayName(), 
-                Attribute.Expression, 
-                validationContext.ModelMetadata.ContainerType, 
+                validationContext.ModelMetadata.GetDisplayName(),
+                Attribute.Expression,
+                validationContext.ModelMetadata.ContainerType,
                 out errFieldsMap);
 
             ErrFieldsMap = errFieldsMap;
@@ -100,8 +94,6 @@ namespace ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Validators
             var fieldId = $"{metadata.ContainerType.FullName}.{metadata.PropertyName}".ToLowerInvariant();
             AttributeFullId = $"{Attribute.TypeId}.{fieldId}".ToLowerInvariant();
             AttributeWeakId = $"{typeof(T).FullName}.{fieldId}".ToLowerInvariant();
-
-            ResetSuffixAllocation();
 
             var item = ProcessStorage<string, CacheItem>.GetOrAdd(AttributeFullId, _ => // map cache is based on static dictionary, set-up once for entire application instance
             {                                                                           // (by design, no reason to recompile once compiled expressions)
@@ -150,7 +142,7 @@ namespace ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Validators
             MethodsList = item.MethodsList;
             ParsersMap = item.ParsersMap;
         }
-        
+
         /// <summary>
         ///     Gets names and coarse types of properties extracted from specified expression within given context.
         /// </summary>
@@ -187,7 +179,7 @@ namespace ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Validators
         ///     Gets attribute partial identifier - attribute type name concatenated with annotated field identifier.
         /// </summary>
         private string AttributeWeakId { get; set; }
-        
+
 
         /// <summary>
         ///     Provides unique validation type within current annotated field range, when multiple annotations are used (required for client-side).
@@ -196,23 +188,24 @@ namespace ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Validators
         /// <returns>
         ///     Unique validation type within current request.
         /// </returns>
-        private string ProvideUniqueValidationType(string baseName)
+        private string GetUniqueValidationId(ClientModelValidationContext context)
         {
-            return $"{baseName}{AllocateSuffix()}";
-        }
+            const int UtfCodeLetterA = 97; //utf code for the first lowercase letter
 
-        private string AllocateSuffix()
-        {
-            var count = _requestStorage.Get<int>(AttributeWeakId);
-            count++;
-            AssertAttribsQuantityAllowed(count);
-            _requestStorage.Set(AttributeWeakId, count);
-            return count == 1 ? string.Empty : char.ConvertFromUtf32(95 + count); // single lowercase letter from latin alphabet or an empty string
-        }
+            var baseName = GetBasicRuleType();
 
-        private void ResetSuffixAllocation()
-        {
-            _requestStorage.Remove(AttributeWeakId);
+            string suffix = "";
+
+            var count = 0;
+
+            while (context?.Attributes != null && context.Attributes.ContainsKey($"data-val-{baseName}{suffix}"))
+            {
+                AssertAttribsQuantityAllowed(count);
+                suffix = char.ConvertFromUtf32(UtfCodeLetterA + count); // single lowercase letter from latin alphabet
+                count++;
+            }
+
+            return $"{baseName}{suffix}";
         }
 
         private void AssertClientSideCompatibility()

@@ -1,5 +1,4 @@
 ﻿using ExpressiveAnnotations.DotNetCore.Attributes;
-using ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Caching;
 using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 using Microsoft.Extensions.Localization;
 using System;
@@ -9,8 +8,8 @@ namespace ExpressiveAnnotations.DotNetCore.MvcUnobtrusive.Validators
 {
     public class RequiredIfValidator : ExpressiveValidator<RequiredIfAttribute>
     {
-        public RequiredIfValidator(RequiredIfAttribute attribute, IStringLocalizer stringLocalizer, RequestStorage requestStorage)
-            : base(attribute, stringLocalizer, requestStorage)
+        public RequiredIfValidator(RequiredIfAttribute attribute, IStringLocalizer stringLocalizer)
+            : base(attribute, stringLocalizer)
         {
             AllowEmpty = attribute.AllowEmptyStrings;
         }
